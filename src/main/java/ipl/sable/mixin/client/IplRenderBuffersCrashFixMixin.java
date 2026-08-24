@@ -47,14 +47,14 @@ public class IplRenderBuffersCrashFixMixin {
     )
     private RenderBuffers ip_safeCreateRenderBuffers() {
         try {
-            return new RenderBuffers();
+            return new RenderBuffers(256);
         } catch (Throwable t) {
             LOG.error("[IPL-CRASH-FIX] RenderBuffers construction failed: {}", t.getMessage());
             if (!ip$retryingRenderBuffers) {
                 ip$retryingRenderBuffers = true;
                 LOG.info("[IPL-CRASH-FIX] Retrying RenderBuffers construction...");
                 try {
-                    return new RenderBuffers();
+                    return new RenderBuffers(256);
                 } catch (Throwable t2) {
                     LOG.error("[IPL-CRASH-FIX] RenderBuffers retry also failed: {}", t2.getMessage());
                 }
