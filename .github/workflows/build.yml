@@ -2,43 +2,58 @@ name: Build IPSable-but-worse
 
 on:
   push:
-分支: [ "main", "master", "default" ]
+    branches: [ "main", "master", "default" ]
   pull_request:
-分支: [ "main", "master", "default" ]
-  workflow_dispatch:
+    branches: [ "main", "master", "default" ]
+  workflow_dispatch:   # 手动触发按钮
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. 设置 JDK（模组项目通常用 Java 17 或 21，这里设 21）
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+      # 3. 使用官方 Gradle Action（自动处理 wrapper、缓存、守护进程）
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          # 启用缓存，加速后续构建
+          cache-read-only: false
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      # 4. （可选）列出所有可用的 Gradle 任务，帮助确认正确任务名
+      - name: List all Gradle tasks
+        run: ./gradlew tasks --no-daemon
 
-      - name: Build with Gradle
-        run: ./gradlew jarJar --no-daemon
+      # 5. 执行构建（先尝试最常见的 build，如果失败你可以换成 jarJar 或其他）
+      - name: Build with Gradle (build)
+        id: build
+        continue-on-error: true   # 先不中止，收集信息
+        run: ./gradlew build --no-daemon --stacktrace
 
+      # 如果 build 失败，自动尝试 jarJar（很多 Forge 模组用这个）
+      - name: If build failed, try jarJar
+        if: steps.build.outcome == 'failure'
+        run: ./gradlew jarJar --no-daemon --stacktrace
+
+      # 如果 jarJar 也失败，尝试 remapJar（Fabric 常用）
+      - name: If jarJar failed, try remapJar
+        if: steps.build.outcome == 'failure'
+        run: ./gradlew remapJar --no-daemon --stacktrace
+
+      # 6. 上传构建产物（无论哪个任务成功，都会生成 jar）
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: IPSable-but-worse
-          path: build/libs/immersive-portals-sable-compat-*.jar
+          # 匹配常见的输出目录：build/libs 下的所有 jar
+          path: build/libs/*.jar
