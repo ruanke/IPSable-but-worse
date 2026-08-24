@@ -2,9 +2,9 @@ name: Build IPSable-but-worse
 
 on:
   push:
-    branches: [ "default" ]
+分支: [ "default" ]
   pull_request:
-    branches: [ "default" ]
+分支: [ "default" ]
   workflow_dispatch:  # 允许手动触发
 
 jobs:
